@@ -87,7 +87,7 @@ $(document).on("click", ".identity-page-block", function(e){
             $(".request-identity-button").html("<p>Buy $50</p>")
         } else if (idType == "weaponlicense") {
             $(".request-identity-button").fadeIn(100);
-            $(".request-identity-button").html("<p>Buy $50</p>")
+            $(".request-identity-button").html("<p>Buy $2500</p>")
         }
     } else if (selectedIdentity == this) {
         $(this).removeClass("identity-selected");
@@ -98,11 +98,11 @@ $(document).on("click", ".identity-page-block", function(e){
         $(this).addClass("identity-selected");
         selectedIdentity = this;
         if (idType == "id_card") {
-            $(".request-identity-button").html("<p>Buy</p>")
+            $(".request-identity-button").html("<p>Buy $50</p>")
         } else if (idType == "driver_license") {
-            $(".request-identity-button").html("<p>Buy</p>")
+            $(".request-identity-button").html("<p>Buy $50</p>")
         } else if (idType == "weaponlicense") {
-            $(".request-identity-button").html("<p>Buy</p>")
+            $(".request-identity-button").html("<p>Buy $2500</p>")
         }
     }
 });

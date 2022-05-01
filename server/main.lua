@@ -5,6 +5,7 @@ local DrivingSchools = {}
 RegisterNetEvent('qb-cityhall:server:requestId', function(identityData)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
+    local price = 50
     local info = {}
     if identityData.item == "id_card" then
         info.citizenid = Player.PlayerData.citizenid
@@ -22,11 +23,12 @@ RegisterNetEvent('qb-cityhall:server:requestId', function(identityData)
         info.firstname = Player.PlayerData.charinfo.firstname
         info.lastname = Player.PlayerData.charinfo.lastname
         info.birthdate = Player.PlayerData.charinfo.birthdate
+        price = 2500
     end
 
     Player.Functions.AddItem(identityData.item, 1, nil, info)
     TriggerClientEvent('inventory:client:ItemBox', src, QBCore.Shared.Items[identityData.item], 'add')
-    Player.Functions.RemoveMoney("cash", 50)
+    Player.Functions.RemoveMoney("cash", price)
 end)
 
 RegisterNetEvent('qb-cityhall:server:getIDs', function()
@@ -154,4 +156,15 @@ RegisterNetEvent('qb-cityhall:server:banPlayer', function()
         GetPlayerName(src)
     })
     DropPlayer(src, 'Attempting To Exploit')
+end)
+
+RegisterNetEvent('qb-cityhall:server:grantWeaponsLicense', function()
+    local Player = QBCore.Functions.GetPlayer(source)
+    local licenseTable = Player.PlayerData.metadata["licences"]
+    licenseTable['weapon'] = true
+    Player.Functions.SetMetaData("licences", licenseTable)
+    TriggerClientEvent('QBCore:Notify', Player.PlayerData.source, "You have been granted a license",
+        "success", 5000)
+    TriggerClientEvent('QBCore:Notify', Player.PlayerData.source, "Make sure you buy the physical copy.",
+    "success", 5000)
 end)

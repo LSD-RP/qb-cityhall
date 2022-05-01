@@ -13,3 +13,7 @@ Config.DriverTest = {
 Config.DrivingSchool = {
     coords = vector3(232.5, 368.7, 105.94)
 }
+
+Config.BuyWeaponLicense = {
+    coords = vector3(-261.3436, -964.9681, 31.2240)
+}

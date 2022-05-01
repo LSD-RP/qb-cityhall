@@ -164,3 +164,32 @@ RegisterNUICallback('applyJob', function(data)
         QBCore.Functions.Notify('Unfortunately will not work ...', 'error')
     end
 end)
+
+CreateThread(function()
+    while true do
+
+        local ped = PlayerPedId()
+        local pos = GetEntityCoords(ped)
+        inRange = false
+
+        local dist = #(pos - Config.Cityhall.coords)
+        -- local dist2 = #(pos - Config.DrivingSchool.coords)
+
+        if dist < 20 then
+            inRange = true
+            DrawMarker(2, Config.BuyWeaponLicense.coords.x, Config.BuyWeaponLicense.coords.y, Config.BuyWeaponLicense.coords.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, 0.2, 155, 152, 234, 155, false, false, false, true, false, false, false)
+            if #(pos - vector3(Config.BuyWeaponLicense.coords.x, Config.BuyWeaponLicense.coords.y, Config.BuyWeaponLicense.coords.z)) < 1.5 then
+                DrawText3Ds(Config.BuyWeaponLicense.coords, '~g~E~w~ - Obtain Weapons License Permission')
+                if IsControlJustPressed(0, 38) then
+                    TriggerServerEvent('qb-cityhall:server:grantWeaponsLicense')
+                end
+            end
+        end
+
+        if not inRange then
+            Wait(1000)
+        end
+
+        Wait(2)
+    end
+end)
