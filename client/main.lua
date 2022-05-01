@@ -28,6 +28,21 @@ local function getClosestHall()
     return closest
 end
 
+DrawText3Ds = function(coords, text)
+	SetTextScale(0.35, 0.35)
+	SetTextFont(4)
+	SetTextProportional(1)
+	SetTextColour(255, 255, 255, 215)
+	SetTextEntry("STRING")
+	SetTextCentre(true)
+	AddTextComponentString(text)
+	SetDrawOrigin(coords.x, coords.y, coords.z, 0)
+	DrawText(0.0, 0.0)
+	local factor = (string.len(text)) / 370
+	DrawRect(0.0, 0.0+0.0125, 0.017+ factor, 0.03, 0, 0, 0, 75)
+	ClearDrawOrigin()
+end
+
 local function getClosestSchool()
     local distance = #(playerCoords - Config.DrivingSchools[1].coords)
     local closest = 1
@@ -345,23 +360,25 @@ CreateThread(function()
             DrawMarker(2, Config.BuyWeaponLicense.coords.x, Config.BuyWeaponLicense.coords.y, Config.BuyWeaponLicense.coords.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, 0.2, 155, 152, 234, 155, false, false, false, true, false, false, false)
             DrawMarker(2, Config.Cityhalls[1].coords.x, Config.Cityhalls[1].coords.y, Config.Cityhalls[1].coords.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, 0.2, 155, 152, 234, 155, false, false, false, true, false, false, false)
             if #(pos - vector3(Config.BuyWeaponLicense.coords.x, Config.BuyWeaponLicense.coords.y, Config.BuyWeaponLicense.coords.z)) < 1.5 then
-                inCloseRange = true
                 DrawText3Ds(Config.BuyWeaponLicense.coords, '~g~E~w~ - Obtain Weapons License Permission')
                 if IsControlJustPressed(0, 38) then
                     TriggerServerEvent('qb-cityhall:server:grantWeaponsLicense')
                 end
             end
+            if #(pos - Config.Cityhalls[1].coords) < 1.5 then
+                DrawText3Ds(Config.Cityhalls[1].coords, '~g~E~w~ - Open City Services Menu')
+                inCloseRange = true
+                inRangeCityhall = true
+                -- exports['qb-core']:DrawText('[E] Open Cityhall')
+            end
         elseif dist2 < 20 then
             inRange = true
             DrawMarker(2, Config.DrivingSchools[1].coords.x, Config.DrivingSchools[1].coords.y, Config.DrivingSchools[1].coords.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, 0.2, 155, 152, 234, 155, false, false, false, true, false, false, false)
             if #(pos - Config.DrivingSchools[1].coords) < 1.5 then
+                DrawText3Ds(Config.DrivingSchools[1].coords, '~g~E~w~ - Open Driving School')
                 inCloseRange = true
                 inRangeDrivingSchool = true
-                exports['qb-core']:DrawText('[E] Take Driving Lessons')
-                -- DrawText3Ds(Config.BuyWeaponLicense.coords, '~g~E~w~ - Obtain Weapons License Permission')
-                -- if IsControlJustPressed(0, 38) then
-                --     TriggerServerEvent('qb-cityhall:server:grantWeaponsLicense')
-                -- end
+                -- exports['qb-core']:DrawText('[E] Take Driving Lessons')
             end
         end
 
