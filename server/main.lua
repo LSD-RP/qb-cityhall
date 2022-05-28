@@ -139,3 +139,37 @@ RegisterNetEvent('qb-cityhall:server:grantWeaponsLicense', function()
     TriggerClientEvent('QBCore:Notify', Player.PlayerData.source, "Make sure you buy the physical copy.",
     "success", 5000)
 end)
+
+
+QBCore.Functions.CreateCallback('qb-flighttest:server:payFee', function(source, cb, amt)
+    local src = source
+    local Player = QBCore.Functions.GetPlayer(src)
+    if Player.Functions.GetMoney('cash') >= amt then
+        Player.Functions.RemoveMoney('cash', amt)
+        cb(true)
+    elseif Player.Functions.GetMoney('bank') >= amt then
+        Player.Functions.RemoveMoney('bank', amt)
+        cb(true)
+    else
+        cb(false)
+    end
+end)
+
+RegisterNetEvent('qb-flighttest:server:giveLicense', function(license)
+    local src = source
+    local Player = QBCore.Functions.GetPlayer(src)
+    local info = {}
+    info.firstname = Player.PlayerData.charinfo.firstname
+    info.lastname = Player.PlayerData.charinfo.lastname
+    info.birthdate = Player.PlayerData.charinfo.birthdate
+    if license == 'plane' then
+        info.type = "Small Plane Flight License"
+        Player.Functions.AddItem('flight_license', 1, false, info)
+    end
+    if license == 'heli' then
+        info.type = "Helicopter Flight License"
+        Player.Functions.AddItem('flight_license', 1, false, info)
+    end
+    TriggerClientEvent('inventory:client:ItemBox', Player.PlayerData.source, QBCore.Shared.Items['flight_license'], 'add')
+
+end)

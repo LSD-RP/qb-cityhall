@@ -12,6 +12,18 @@ local pedsSpawned = false
 local table_clone = table.clone
 local blips = {}
 
+-- Flight school
+local inRangeFlight = false
+local headerOpen = false
+local CurrentTest       = nil
+local CurrentTestType   = nil
+local CurrentVehicle    = nil
+local CurrentCheckPoint, DriveErrors = 0, 0
+local LastCheckPoint    = -1
+local CurrentBlip       = nil
+local fail = false
+timeLeft = 45
+
 -- Functions
 
 local function getClosestHall()
@@ -148,7 +160,7 @@ local function spawnPeds()
                     label = 'Take Driving Lessons',
                     icon = 'fa-solid fa-car-side',
                     action = function()
-                        TriggerServerEvent('qb-cityhall:server:sendDriverTest', Config.DrivingSchools[closestDrivingSchool].instructors)
+                        -- TriggerServerEvent('qb-cityhall:server:sendDriverTest', Config.DrivingSchools[closestDrivingSchool].instructors)
                     end
                 }
             elseif current.cityhall then
@@ -393,7 +405,7 @@ CreateThread(function()
 
         if not inRange then
             Wait(1000)
-            
+            current = nil
         end
 
 
@@ -401,3 +413,310 @@ CreateThread(function()
         Wait(2)
     end
 end)
+
+local function drawTxt(text,font,x,y,scale,r,g,b,a)
+	SetTextFont(font)
+	SetTextScale(scale,scale)
+	SetTextColour(r,g,b,a)
+	SetTextOutline()
+	SetTextCentre(1)
+	SetTextEntry("STRING")
+	AddTextComponentString(text)
+	DrawText(x,y)
+end
+
+
+function drawRectangle(width)
+    -- BeginTextCommandDisplayHelp("STRING")
+    -- AddTextComponentSubstringPlayerName(msg)
+    -- EndTextCommandDisplayHelp(0, 0, 1, -1)
+    if not fail then
+        DrawRect(0.5, 0.1, width, 0.05, 100, 100, 255, 100)
+    end
+end
+
+function DrawMissionText(msg, time)
+	ClearPrints()
+	BeginTextCommandPrint('STRING')
+	AddTextComponentSubstringPlayerName(msg)
+	EndTextCommandPrint(time, true)
+end
+
+-- marker on ground to open first menu
+Citizen.CreateThread(function()
+    while true do 
+        local sleep = 5000
+        local pos = GetEntityCoords(PlayerPedId())
+        if #(pos - Config.StartLocation) < 15 then
+            sleep = 5
+            DrawMarker(1, Config.StartLocation.x, Config.StartLocation.y, Config.StartLocation.z - 1.02, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 0.9, 77, 181, 255, 0.8, false, false, 2,false, nil, nil, false)
+            if #(pos - Config.StartLocation) < 2 then
+                inRangeFlight = true
+            else
+                inRangeFlight = false
+            end
+            if inRangeFlight and not headerOpen then
+                headerOpen = true
+                
+                exports['qb-menu']:showHeader({
+                    {
+                        header = 'Flight School',
+                        txt = 'Open Menu',
+                        params = {
+                            event = "qb-flighttest:client:openMenu"
+                        }
+                    }
+                })
+            end
+            if not inRangeFlight and headerOpen then
+                headerOpen = false
+                exports['qb-menu']:closeMenu()
+            end
+
+        end
+        Wait(sleep)
+    end
+end)
+
+RegisterNetEvent('qb-flighttest:client:openMenu', function()
+    local menu = {
+        {
+            header = 'Flight School',
+            isMenuHeader = true,
+        },
+        {
+            header = 'Take Flight Test',
+            txt = 'Plane Test: $250,000',
+            params = {
+                event = "qb-flighttest:client:takePlaneTest",
+            }
+        },
+        {
+            header = 'Take Helicopter Test',
+            txt = 'Heli Test: $300,000',
+            params = {
+                event = "qb-flighttest:client:takeHeliTest",
+            }
+        }
+    }
+    exports['qb-menu']:openMenu(menu)
+end)
+
+RegisterNetEvent('qb-flighttest:client:takePlaneTest', function()
+    QBCore.Functions.TriggerCallback('qb-flighttest:server:payFee', function(result)
+        if result then
+            -- print('begin test')
+            takePlaneTest()
+        else
+            QBCore.Functions.Notify('You do not have enough money', 'error')
+        end
+    end, 250000)
+end)
+
+local function startTimer()
+    local gameTimer = GetGameTimer()
+    CreateThread(function()
+        while CurrentTest == 'plane' or CurrentTest == 'heli' do
+            if GetGameTimer() < gameTimer + tonumber(1000 * timeLeft) then
+                local secondsLeft = GetGameTimer() - gameTimer
+                drawTxt('Time Remaining: '..math.ceil(timeLeft - secondsLeft / 1000), 4, 0.5, 0.05, 0.50, 255, 255, 255, 180)
+            else
+                fail = true
+            end
+            Wait(0)
+        end
+    end)
+end
+
+RegisterNetEvent('qb-flighttest:client:takeHeliTest', function()
+    QBCore.Functions.TriggerCallback('qb-flighttest:server:payFee', function(result)
+        if result then
+            -- print('begin test')
+            takeHeliTest()
+        else
+            QBCore.Functions.Notify('You do not have enough money', 'error')
+        end
+    end, 300000)
+end)
+
+function takePlaneTest()
+    QBCore.Functions.SpawnVehicle('mammatus', function(veh)
+        local ped = PlayerPedId()
+        TaskWarpPedIntoVehicle(ped, veh, -1)
+        SetVehicleEngineOn(veh, true, true)
+        -- SetVehicleFuelLevel(veh, 100.0 )
+        exports['LegacyFuel']:SetFuel(veh, 100.0)
+        CurrentTest = 'plane'
+        timeLeft = 45
+        DrawMissionText('Taxi to the runway', 5000)
+        Wait(5000)
+        DrawMissionText('Follow the markers', 5000)
+        fail = false
+        startTimer()
+    end, Config.PlaneSpawn, true)
+end
+
+function takeHeliTest()
+    QBCore.Functions.SpawnVehicle('maverick', function(veh)
+        local ped = PlayerPedId()
+        TaskWarpPedIntoVehicle(ped, veh, -1)
+        SetVehicleEngineOn(veh, true, true)
+        -- SetVehicleFuelLevel(veh, 100.0 )
+        exports['LegacyFuel']:SetFuel(veh, 100.0)
+        timeLeft = 60
+        CurrentTest = 'heli'
+        DrawMissionText('Follow the markers', 5000)
+        startTimer()
+        fail = false
+    end, Config.PlaneSpawn, true)
+end
+
+
+-- Drive test
+Citizen.CreateThread(function()
+	while true do
+        local sleep = 250
+
+		if CurrentTest == 'plane' then
+            -- if not fail then 
+            --     DrawRect(0.5, 0.1, 0.5, 0.05, 255, 255, 200, 50)
+            -- end
+            sleep = 0
+			local playerPed      = PlayerPedId()
+			local coords         = GetEntityCoords(playerPed)
+			local nextCheckPoint = CurrentCheckPoint + 1
+
+			if Config.PlaneCheckPoints[nextCheckPoint] == nil then
+				if DoesBlipExist(CurrentBlip) then
+					RemoveBlip(CurrentBlip)
+				end
+
+				CurrentTest = nil
+
+				-- ESX.ShowNotification(_U('driving_test_complete'))
+                -- print("test done")
+                -- print(fail)
+                local veh = GetVehiclePedIsIn(playerPed)
+                if GetVehicleEngineHealth(veh) < 900.0 or GetVehicleBodyHealth(veh) < 900.0 or fail then
+                    -- fail
+                    QBCore.Functions.Notify("Looks like you failed this one")
+                else 
+                    -- give license
+                    TriggerServerEvent('qb-flighttest:server:giveLicense', 'plane')
+                end
+                FreezeEntityPosition(veh, true)
+                TaskLeaveVehicle(playerPed, veh, 1)
+                Wait(5000)
+                QBCore.Functions.DeleteVehicle(veh)
+
+				-- if DriveErrors < Config.MaxErrors then
+				-- 	StopDriveTest(true)
+				-- else
+				-- 	StopDriveTest(false)
+				-- end
+			else
+				if CurrentCheckPoint ~= LastCheckPoint then
+					if DoesBlipExist(CurrentBlip) then
+						RemoveBlip(CurrentBlip)
+					end
+
+					CurrentBlip = AddBlipForCoord(Config.PlaneCheckPoints[nextCheckPoint].Pos.x, Config.PlaneCheckPoints[nextCheckPoint].Pos.y, Config.PlaneCheckPoints[nextCheckPoint].Pos.z)
+					SetBlipRoute(CurrentBlip, 1)
+
+					LastCheckPoint = CurrentCheckPoint
+				end
+                local distance = #(coords - Config.PlaneCheckPoints[nextCheckPoint].Pos)
+				-- local distance = GetDistanceBetweenCoords(coords, Config.PlaneCheckPoints[nextCheckPoint].Pos.x, Config.PlaneCheckPoints[nextCheckPoint].Pos.y, Config.PlaneCheckPoints[nextCheckPoint].Pos.z, true)
+
+				if distance <= 2000.0 then
+					DrawMarker(6, Config.PlaneCheckPoints[nextCheckPoint].Pos.x, Config.PlaneCheckPoints[nextCheckPoint].Pos.y, Config.PlaneCheckPoints[nextCheckPoint].Pos.z, 0.0, 0.0, 0.0, 0, 0.0, 0.0, 10.5, 10.5, 10.5, 102, 204, 102, 255, false, true, 2, false, false, false, false)
+				end
+
+				if distance <= 10.0 then
+					Config.PlaneCheckPoints[nextCheckPoint].Action(playerPed, CurrentVehicle, SetCurrentZoneType)
+					CurrentCheckPoint = CurrentCheckPoint + 1
+				end
+			end
+            
+
+		end
+
+        if CurrentTest == 'heli' then
+            -- DrawRect(0.5, 0.1, 0.5, 0.05, 255, 255, 200, 50)
+            sleep = 0
+            local playerPed      = PlayerPedId()
+            local coords         = GetEntityCoords(playerPed)
+            local nextCheckPoint = CurrentCheckPoint + 1
+
+            if Config.HeliCheckPoints[nextCheckPoint] == nil then
+                if DoesBlipExist(CurrentBlip) then
+                    RemoveBlip(CurrentBlip)
+                end
+
+                CurrentTest = nil
+
+                -- ESX.ShowNotification(_U('driving_test_complete'))
+                -- print("test done")
+                -- print(fail)
+                local veh = GetVehiclePedIsIn(playerPed)
+                if GetVehicleEngineHealth(veh) < 900.0 or GetVehicleBodyHealth(veh) < 900.0 then
+                    -- fail
+                else 
+                    -- give license
+                    TriggerServerEvent('qb-flighttest:server:giveLicense', 'heli')
+                end
+                FreezeEntityPosition(veh, true)
+                TaskLeaveVehicle(playerPed, veh, 1)
+                Wait(5000)
+                QBCore.Functions.DeleteVehicle(veh)
+
+                -- if DriveErrors < Config.MaxErrors then
+                -- 	StopDriveTest(true)
+                -- else
+                -- 	StopDriveTest(false)
+                -- end
+            else
+                if CurrentCheckPoint ~= LastCheckPoint then
+                    if DoesBlipExist(CurrentBlip) then
+                        RemoveBlip(CurrentBlip)
+                    end
+
+                    CurrentBlip = AddBlipForCoord(Config.HeliCheckPoints[nextCheckPoint].Pos.x, Config.HeliCheckPoints[nextCheckPoint].Pos.y, Config.HeliCheckPoints[nextCheckPoint].Pos.z)
+                    SetBlipRoute(CurrentBlip, 1)
+
+                    LastCheckPoint = CurrentCheckPoint
+                end
+                local distance = #(coords - Config.HeliCheckPoints[nextCheckPoint].Pos)
+                -- local distance = GetDistanceBetweenCoords(coords, Config.HeliCheckPoints[nextCheckPoint].Pos.x, Config.HeliCheckPoints[nextCheckPoint].Pos.y, Config.HeliCheckPoints[nextCheckPoint].Pos.z, true)
+
+                if distance <= 2000.0 then
+                    DrawMarker(6, Config.HeliCheckPoints[nextCheckPoint].Pos.x, Config.HeliCheckPoints[nextCheckPoint].Pos.y, Config.HeliCheckPoints[nextCheckPoint].Pos.z, 0.0, 0.0, 0.0, 0, 0.0, 0.0, 10.5, 10.5, 10.5, 102, 204, 102, 255, false, true, 2, false, false, false, false)
+                end
+
+                if distance <= 10.0 then
+                    Config.HeliCheckPoints[nextCheckPoint].Action(playerPed, CurrentVehicle, SetCurrentZoneType)
+                    CurrentCheckPoint = CurrentCheckPoint + 1
+                end
+            end
+        end
+
+        -- not currently taking driver test
+        Wait(sleep)
+	end
+end)
+
+-- Citizen.CreateThread(function()
+--     while true do 
+--         local sleep = 5000
+--         if CurrentTest == "plane" then
+--             sleep = 0
+--             -- 0.5 max
+--             -- 0.0 min
+--             -- 20000 ms * x = 0.5
+--             timeLeft = timeLeft + 2
+--             drawRectangle(0.5 - (timeLeft * 0.000025))
+--             if 0.5 - (timeLeft * 0.000025) <= 0.0 then fail = true end
+--         end
+--         Wait(sleep)
+--     end
+-- end)
