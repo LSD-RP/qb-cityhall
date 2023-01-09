@@ -78,8 +78,8 @@ local function setCityhallPageState(bool, message)
     end
     SetNuiFocus(bool, bool)
     inCityhallPage = bool
-    if not Config.UseTarget or bool then return end
     inRangeCityhall = false
+    if not Config.UseTarget or bool then return end
 end
 
 local function createBlip(options)
@@ -332,6 +332,7 @@ CreateThread(function()
                 if inRangeCityhall then
                     if not inCityhallPage then
                         sleep = 0
+                        
                         if IsControlJustPressed(0, 38) then
                             setCityhallPageState(true, true)
                             exports['qb-core']:KeyPressed()
@@ -396,6 +397,8 @@ CreateThread(function()
 
         if not inCloseRange then
             exports['qb-core']:HideText()
+            inRangeDrivingSchool = false
+            inRangeCityhall = false
             if current and current.drivingschool then
                 inRangeDrivingSchool = false
             elseif current and current.cityhall then
