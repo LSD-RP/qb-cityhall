@@ -6,14 +6,28 @@ local availableJobs = {
     ["reporter"] = "News Reporter",
     ["garbage"] = "Garbage Collector",
     ["bus"] = "Bus Driver",
+    ["hotdog"] = "Hot Dog Stand"
 }
+
+-- Exports
+
+local function AddCityJob(jobName, label)
+    if availableJobs[jobName] ~= nil then
+        return false, "already added"
+    else
+        availableJobs[jobName] = label
+        return true, "success"
+    end
+end
+
+exports('AddCityJob', AddCityJob)
 
 -- Functions
 
 local function giveStarterItems()
     local Player = QBCore.Functions.GetPlayer(source)
     if not Player then return end
-    for k, v in pairs(QBCore.Shared.StarterItems) do
+    for _, v in pairs(QBCore.Shared.StarterItems) do
         local info = {}
         if v.item == "id_card" then
             info.citizenid = Player.PlayerData.citizenid
@@ -34,16 +48,18 @@ end
 
 -- Callbacks
 
-QBCore.Functions.CreateCallback('qb-cityhall:server:receiveJobs', function(source, cb)
+QBCore.Functions.CreateCallback('qb-cityhall:server:receiveJobs', function(_, cb)
     cb(availableJobs)
 end)
 
 -- Events
 
-RegisterNetEvent('qb-cityhall:server:requestId', function(item, cost)
+RegisterNetEvent('qb-cityhall:server:requestId', function(item, hall)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
-    if not Player.Functions.RemoveMoney("cash", cost) then return TriggerClientEvent('QBCore:Notify', src, ('You don\'t have enough money on you, you need %s cash'):format(cost), 'error') end
+    if not Player then return end
+    local itemInfo = Config.Cityhalls[hall].licenses[item]
+    if not Player.Functions.RemoveMoney("cash", itemInfo.cost) then return TriggerClientEvent('QBCore:Notify', src, ('You don\'t have enough money on you, you need %s cash'):format(itemInfo.cost), 'error') end
     local info = {}
     if item == "id_card" then
         info.citizenid = Player.PlayerData.citizenid
@@ -62,6 +78,8 @@ RegisterNetEvent('qb-cityhall:server:requestId', function(item, cost)
         info.lastname = Player.PlayerData.charinfo.lastname
         info.birthdate = Player.PlayerData.charinfo.birthdate
         price = 2500
+    else
+        -- return DropPlayer(src, 'Attempted exploit abuse')
     end
     if not Player.Functions.AddItem(item, 1, nil, info) then return end
     TriggerClientEvent('inventory:client:ItemBox', src, QBCore.Shared.Items[item], 'add')
@@ -70,6 +88,7 @@ end)
 RegisterNetEvent('qb-cityhall:server:sendDriverTest', function(instructors)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
+    if not Player then return end
     for i = 1, #instructors do
         local citizenid = instructors[i]
         local SchoolPlayer = QBCore.Functions.GetPlayerByCitizenId(citizenid)
@@ -82,7 +101,7 @@ RegisterNetEvent('qb-cityhall:server:sendDriverTest', function(instructors)
                 message = "Hello,<br><br>We have just received a message that someone wants to take driving lessons.<br>If you are willing to teach, please contact them:<br>Name: <strong>".. Player.PlayerData.charinfo.firstname .. " " .. Player.PlayerData.charinfo.lastname .. "<br />Phone Number: <strong>"..Player.PlayerData.charinfo.phone.."</strong><br><br>Kind regards,<br>Township Los Santos",
                 button = {}
             }
-            TriggerEvent("qb-phone:server:sendNewMailToOffline", citizenid, mailData)
+            exports["qb-phone"]:sendNewMailToOffline(citizenid, mailData)
         end
     end
     TriggerClientEvent('QBCore:Notify', src, "An email has been sent to driving schools, and you will be contacted automatically", "success", 5000)
@@ -91,6 +110,7 @@ end)
 RegisterNetEvent('qb-cityhall:server:ApplyJob', function(job, cityhallCoords)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
+    if not Player then return end
     local ped = GetPlayerPed(src)
     local pedCoords = GetEntityCoords(ped)
     local JobInfo = QBCore.Shared.Jobs[job]
